@@ -189,23 +189,23 @@ instr <- page(
   save_answer = TRUE
 )
 
-##Math instructions
-ui_math_instr <- tags$div(
-  head,
-  includeScript(file.path(base_dir, "math_instr.js")),
-  includeScript(file.path(base_dir, "run-jspsych_full.js")),
-  tags$div(id = "js_psych", style = "min-height: 90vh")
-)
+##pictogram instructions
+#ui_pict_instr <- tags$div(
+  #head,
+  #includeScript(file.path(base_dir, "pict_instr.js")),
+  #includeScript(file.path(base_dir, "run-jspsych_full.js")),
+  #tags$div(id = "js_psych", style = "min-height: 90vh")
+#)
 
-math_instr <- page(
-  ui = ui_math_instr,
-  label = "math_instr",
-  get_answer = function(input, ...)
-    input$jspsych_results,
-  validate = function(answer, ...)
-    nchar(answer) > 0L,
-  save_answer = TRUE
-)
+#pict_instr <- page(
+  #ui = ui_pict_instr,
+  #label = "pict_instr",
+  #get_answer = function(input, ...)
+    #input$jspsych_results,
+  #validate = function(answer, ...)
+    #nchar(answer) > 0L,
+  #save_answer = TRUE
+#)
 
 ##Test
 ui_test <- tags$div(
@@ -329,12 +329,12 @@ final <- final_page(tags$div(
 ##elts
 elts <- join(
   consent,
-  gender,
-  demographics,
+  instr,
+  #pict_instr,
+  #gender,
+  #demographics,
   nativelang,
   #dyslexia,
-  math_instr,
-  instr,
   test,
   # elt_save_results_to_disk(complete = FALSE), # anything that is saved here counts as completed
   elt_save_results_to_disk(complete = TRUE),
