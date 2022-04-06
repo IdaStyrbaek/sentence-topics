@@ -57,13 +57,29 @@ timeline.push(consent);
 /* preload audiofiles*/
 var preload = {
   type: jsPsychPreload,
-  sound_files: ['animal-animals1.mp3','audio/2.wav','audio/3.wav','audio/4.wav','audio/5.wav','audio/6.wav','audio/7.wav','audio/8.wav','audio/9.wav','audio/10.wav', 'audio/11.wav', 'audio/12.wav'],
-  infra_sound: ['audio/sweep.wav']
+  sound_files: ['animal-animals1.mp3','animal-hippo1.mp3','animal-rats1.mp3','animal-wolves1.mp3','animal-zebra1.mp3','biscuit-beskidt-E1.mp3','flu-flue-E1.mp3','food-cake1','food-fried rice1','food-muffins1.mp3', 'food-mushrooms1.mp3', 'food-omelette1.mp3'],
 }
 timeline.push(preload);
 
 /*demographics trial*/
-
+var demo = {
+  type: jsPsychSurveyMultiChoice,
+  questions: [
+    {
+      prompt: "Sex", 
+      name: 'sex', 
+      options: ['Female', 'Male', 'Other', 'Do not wish to inform'], 
+      required: true
+    }, 
+    {
+      prompt: "Age", 
+      name: 'age', 
+      options: ['<20', '20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80+'], 
+      required: true
+    }
+  ],
+};
+timeline.push(demo);
 
 /* check sound*/
 var calibrate = {
@@ -101,61 +117,35 @@ timeline.push({
 /* create variable containing the files*/
 var sound_files = [
   {sound: 'animal-animals1.mp3'},
-  {sound: 'audio/2.wav'},
-  {sound: 'audio/3.wav'},
-  {sound: 'audio/4.wav'},
-  {sound: 'audio/5.wav'},
-  {sound: 'audio/6.wav'},
-  {sound: 'audio/7.wav'},
-  {sound: 'audio/8.wav'},
-  {sound: 'audio/9.wav'},
-  {sound: 'audio/10.wav'},
-  {sound: 'audio/11.wav'},
-  {sound: 'audio/12.wav'},   
+  {sound: 'animal-hippo1.mp3'},
+  {sound: 'animal-rats1.mp3'},
+  {sound: 'animal-wolves1.mp3'},
+  {sound: 'animal-zebra1.mp3'},
+  {sound: 'biscuit-beskidt-E1.mp3'},
+  {sound: 'flu-flue-E1.mp3'},
+  {sound: 'food-cake1'},
+  {sound: 'food-fried rice1'},
+  {sound: 'food-muffins1.mp3'},
+  {sound: 'food-mushrooms1.mp3'},
+  {sound: 'food-omelette1.mp3'},   
 ]
 
-var infra_sound = {sound: 'animal-animals1.mp3'}
-
-/* define pre-audio trial*/
-var pre_audio_trial = {
-  type: jsPsychAudioKeyboardResponse,
-  stimulus: 'animal-animals1.mp3',
-  choices: "NO_KEYS",
-  trial_ends_after_audio: true
-}
-
-/* define audio trial*/
+/*define audio trial*/
 var audio_trial = {
-  type: jsPsychAudioKeyboardResponse,
+  type: jsPsychAudioButtonResponse,
   stimulus: jsPsych.timelineVariable('sound'),
-  prompt: '<img src="animal.png" height="200" width="250">', 
-  choices: "NO_KEYS",
-  trial_ends_after_audio: true
-}
-
-/* create likert scale*/
-var likert_scale = [
-  "1",
-  "2",
-  "3",
-  "4",
-  "5",
-  "6",
-  "7"
-];
-
-/* define response trial with likert scale*/
-var response_trial = {
-  type: jsPsychSurveyLikert,
-  questions: [
-    {prompt: '<p>How much pleasure did you experience from listening to this drum-break?</p>', name: 'Pleasure', labels: likert_scale, required: true},
-    {prompt: '<p>How much did this drum-break make you want to move?</p>', name: 'Wanting to move', labels: likert_scale, required: true},
-  ]
+  choices: ['animal.png', 'people.png', 'food.png', 'none.png'],
+  prompt: "<p>What is the main theme?</p>",
+  button_html: '<button class="jspsych-btn"><img src="%choice%" /></button>',
+  response_allowed_while_playing: true,
+  response_ends_trial: false,
+  trial_duration: 4000
 };
+
 
 /* define procedure for trials*/
 var procedure = {
-  timeline: [pre_audio_trial, audio_trial, response_trial],
+  timeline: [audio_trial],
   timeline_variables: sound_files,
   randomize_order: true
 }
