@@ -57,7 +57,7 @@ timeline.push(consent);
 /* preload audiofiles*/
 var preload = {
   type: jsPsychPreload,
-  sound_files: ['animal-animals1.mp3','animal-hippo1.mp3','animal-rats1.mp3','animal-wolves1.mp3','animal-zebra1.mp3','biscuit-beskidt-E1.mp3','flu-flue-E1.mp3','food-cake1','food-fried rice1','food-muffins1.mp3', 'food-mushrooms1.mp3', 'food-omelette1.mp3'],
+  sound_files: sound_files,
 }
 timeline.push(preload);
 
@@ -114,21 +114,6 @@ timeline.push({
   fullscreen_mode: true
 });
 
-/* create variable containing the files*/
-var sound_files = [
-  {sound: 'animal-animals1.mp3'},
-  {sound: 'animal-hippo1.mp3'},
-  {sound: 'animal-rats1.mp3'},
-  {sound: 'animal-wolves1.mp3'},
-  {sound: 'animal-zebra1.mp3'},
-  {sound: 'biscuit-beskidt-E1.mp3'},
-  {sound: 'flu-flue-E1.mp3'},
-  {sound: 'food-cake1'},
-  {sound: 'food-fried rice1'},
-  {sound: 'food-muffins1.mp3'},
-  {sound: 'food-mushrooms1.mp3'},
-  {sound: 'food-omelette1.mp3'},   
-]
 
 /*define audio trial*/
 var audio_trial = {
