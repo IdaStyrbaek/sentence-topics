@@ -84,7 +84,7 @@ timeline.push(demo);
 /* check sound*/
 var calibrate = {
   type: jsPsychAudioButtonResponse,
-  stimulus: 'animal-animals1.mp3',
+  stimulus: 'animal-animals-E.mp3',
   prompt:
     "<h4><strong>Quick sound check</strong></h4>" +
     "<p class='gap-above'>Please adjust the volume of your device to a comfortable level where you can clearly hear the sounds. Then click 'Continue!' above.</p>" +
