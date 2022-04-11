@@ -31,46 +31,46 @@ var sound_files = [
       "sound": "food-muffins-E.mp3"
     },
     {
-      "sound": "people-americans-E"
+      "sound": "people-americans-E.mp3"
     },
     {
-      "sound": "people-passengers-E"
+      "sound": "people-passengers-E.mp3"
     },
     {
-      "sound": "food-pandekager-D"
+      "sound": "food-pandekager-D.mp3"
     },
     {
-      "sound": "none-drukkultur-D"
+      "sound": "none-drukkultur-D.mp3"
     },
     {
-      "sound": "none-udklaedning-D"
+      "sound": "none-udklaedning-D.mp3"
     },
     {
-      "sound": "people-Anders-D"
+      "sound": "people-Anders-D.mp3"
     },
     {
-      "sound": "people-indvandrere-D"
+      "sound": "people-indvandrere-D.mp3"
     },
     {
-      "sound": "people-prins-D"
+      "sound": "people-prins-D.mp3"
     },
     {
-      "sound": "animal-graevling-D"
+      "sound": "animal-graevling-D.mp3"
     },
     {
-      "sound": "animal-raev-D"
+      "sound": "animal-raev-D.mp3"
     },
     {
-      "sound": "animal-biscuit-beskidt-D"
+      "sound": "animal-biscuit-beskidt-D.mp3"
     },
     {
-      "sound": "food-aeblekage-D"
+      "sound": "food-aeblekage-D.mp3"
     },
     {
-      "sound": "food-aeg-D"
+      "sound": "food-aeg-D.mp3"
     },
     {
-      "sound": "none-blade-D"
+      "sound": "none-blade-D.mp3"
     }
   ]
  
