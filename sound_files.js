@@ -1,76 +1,76 @@
 /* create variable containing the files*/
 var sound_files = [
     {
-      "sound_files": "animal-animals-E.mp3"
+      "sound": "animal-animals-E.mp3"
     },
     {
-      "sound_files": "animal-hippo-E.mp3"
+      "sound": "animal-hippo-E.mp3"
     },
     {
-      "sound_files": "animal-rats-E.mp3"
+      "sound": "animal-rats-E.mp3"
     },
     {
-      "sound_files": "none-gymnastics-E.mp3"
+      "sound": "none-gymnastics-E.mp3"
     },
     {
-      "sound_files": "none-wedding-E.mp3"
+      "sound": "none-wedding-E.mp3"
     },
     {
-      "sound_files": "food-biscuit-beskidt-E.mp3"
+      "sound": "food-biscuit-beskidt-E.mp3"
     },
     {
-      "sound_files": "people-flu-flue-E.mp3"
+      "sound": "people-flu-flue-E.mp3"
     },
     {
-      "sound_files": "food-cake-E.mp3"
+      "sound": "food-cake-E.mp3"
     },
     {
-      "sound_files": "none-nailpolish-E.mp3"
+      "sound": "none-nailpolish-E.mp3"
     },
     {
-      "sound_files": "food-muffins-E.mp3"
+      "sound": "food-muffins-E.mp3"
     },
     {
-      "sound_files": "people-americans-E"
+      "sound": "people-americans-E"
     },
     {
-      "sound_files": "people-passengers-E"
+      "sound": "people-passengers-E"
     },
     {
-      "sound_files": "food-pandekager-D"
+      "sound": "food-pandekager-D"
     },
     {
-      "sound_files": "none-drukkultur-D"
+      "sound": "none-drukkultur-D"
     },
     {
-      "sound_files": "none-udklædning-D"
+      "sound": "none-udklaedning-D"
     },
     {
-      "sound_files": "people-Anders-D"
+      "sound": "people-Anders-D"
     },
     {
-      "sound_files": "people-indvandrere-D"
+      "sound": "people-indvandrere-D"
     },
     {
-      "sound_files": "people-prins-D"
+      "sound": "people-prins-D"
     },
     {
-      "sound_files": "animal-grævling-D"
+      "sound": "animal-graevling-D"
     },
     {
-      "sound_files": "animal-ræv-D"
+      "sound": "animal-raev-D"
     },
     {
-      "sound_files": "animal-biscuit-beskidt-D"
+      "sound": "animal-biscuit-beskidt-D"
     },
     {
-      "sound_files": "food-æblekage-D"
+      "sound": "food-aeblekage-D"
     },
     {
-      "sound_files": "food-æg-D"
+      "sound": "food-aeg-D"
     },
     {
-      "sound_files": "none-blade-D"
+      "sound": "none-blade-D"
     }
   ]
  
