@@ -6,7 +6,7 @@ var jsPsych = initJsPsych({
   },
   on_finish: function() {
    console.log(jsPsych.data.get().csv());
-   window.location = 'https://github.com/alberteseeberg'
+   /*window.location = 'https://github.com/alberteseeberg'*/
   }
 });
 
@@ -17,27 +17,22 @@ var timeline = [];
 var instructions = {
   type: jsPsychInstructions,
   pages: [
+    '<h2><b>Instructions</b></h2>' +
     '<p>In this experiment, you will hear some short sentences.</p>'+
-    '<p>For each sentence you will be asked to identify the overall theme, by clicking on a picture.</p>' +
+    '<p>For each sentence you will be asked to identify the <b>main</b> theme, by clicking on a picture.</p>' +
     '<p>The themes are:</p>' +
     '<br>' +
-    '<img src="animal.png" height="200" width="250"></img>' +
-    '<img src="people.png" height="200" width="250"></img>' +
-    '<img src="food.png" height="200" width="250"></img>' +
-    '<img src="none.png" height="200" width="250"></img>' +
+    '<img src="images/animal1.png" height="200" width="200"></img>' +
+    '<img src="images/people1.png" height="200" width="200"></img>' +
+    '<img src="images/food1.png" height="200" width="200"></img>' +
+    '<img src="images/none1.png" height="200" width="200"></img>' +
+    "<p>'animals', 'people', 'food', and 'none of these'.</p>" +
     "<p>You should choose 'none of these' if the theme does not fit any of the other categories.</p>"+ 
-    '<p>You have to try to answer as fast as possible, as soon as you can identify the theme.</p>'
-],
-  allow_keys: false,
-  show_clickable_nav: true
-}
-/* add this node to the timeline */
-timeline.push(instructions);
+    "<p>Many of the sentences include pronouns such as 'I', 'you', 'they' and so on.</p>" +
+    "<p>The theme should only be identified as 'people' if the sentence refers to someone specific,</p>" +
+    "<p>such as 'my brother', 'the man', 'my teacher' etc.</p>" +
+    '<p>You have to try to answer as fast as possible, as soon as you can identify the theme.</p>',
 
-/* define consent page */
-var consent = {
-  type: jsPsychInstructions,
-  pages: [
     '<h2><b>Consent form</b></h2>'+
     "<p>When you press 'Continue' the experiment will begin.</p>"+
     "<p>Before you press 'Continue', it is important that you have read and understood what the task is and what the experiment is about.</p>"+
@@ -52,7 +47,8 @@ var consent = {
   allow_keys: false,
   show_clickable_nav: true
 }
-timeline.push(consent);
+/* add this node to the timeline */
+timeline.push(instructions);
 
 /* preload audiofiles*/
 var preload = {
@@ -62,7 +58,7 @@ var preload = {
 timeline.push(preload);
 
 /*demographics trial*/
-var demo = {
+/*var demo = {
   type: jsPsychSurveyMultiChoice,
   questions: [
     {
@@ -76,23 +72,27 @@ var demo = {
       name: 'age', 
       options: ['<20', '20-29', '30-39', '40-49', '50-59', '60-69', '70-79', '80+'], 
       required: true
-    }
+    },
+		{
+      prompt: "Are you a bilingual speaker of Danish and English?",
+		  name: 'language',
+		  options: ['yes', 'no']
+      required: true
+    }    
   ],
 };
-timeline.push(demo);
+timeline.push(demo); */
 
 /* check sound*/
 var calibrate = {
-  type: jsPsychAudioButtonResponse,
-  stimulus: 'animal-animals-E.mp3',
-  prompt:
-    "<h4><strong>Quick sound check</strong></h4>" +
-    "<p class='gap-above'>Please adjust the volume of your device to a comfortable level where you can clearly hear the sounds. Then click 'Continue!' above.</p>" +
-    "<p class='gap-above'>..........</p>" +
-    "<p class='font15'>If the experiment fails to load, or you cannot hear the sounds despite having turned up the volume, close the window and open it in a different browser, e.g., Chrome, Firefox or Edge.</p>",
-  choices: ["<p class='font15'><strong>Play sound</strong></p>"+"<p class='font15'><strong> again</strong></p>","<p class='font15'><strong>Volume is comfortable now.</strong></p>" +
-    "<p class='font15'><strong> Continue!</strong></p>"],
-  margin_vertical: '2px'
+  type: jsPsychInstructions,
+  pages: [
+    '<audio id="testAudio"><source src="sound/tone.mp3" type="audio/mpeg"></audio><h1>Sound Test</h1>' +
+    "<p>When you have adjusted the sound to a comfortable level, press 'Continue'.</p>" +
+    '<p>Please test your sound by clicking the button below. You may click it multiple times to adjust your volume so you can hear it clearly.</p><button onclick="playSound()" type="button" class="snd-btn"><img src="images/sound.jpg" alt="Click to test sound" /></button>'
+  ], 
+  show_clickable_nav: true,
+  button_label: "Continue",
 };
 
 loop_calibrate = {
@@ -105,6 +105,12 @@ loop_calibrate = {
     }
   }
 };
+
+/**	This function plays the sound in the sound check **/
+function playSound(){
+	var x = document.getElementById("testAudio");
+	x.play();
+}
 
 timeline.push(loop_calibrate);
 
@@ -119,9 +125,9 @@ timeline.push({
 var audio_trial = {
   type: jsPsychAudioButtonResponse,
   stimulus: jsPsych.timelineVariable('sound'),
-  choices: ['animal.png', 'people.png', 'food.png', 'none.png'],
   prompt: "<p>What is the main theme?</p>",
-  button_html: '<button class="jspsych-btn"><img src="%choice%" /></button>',
+  choices: ['images/animal1.png', 'images/people1.png', 'images/food1.png', 'images/none1.png'],
+  button_html: '<button class="jspsych-btn"><img src="%choice%" height="200" width="200"/></button>',
   response_allowed_while_playing: true,
   response_ends_trial: false,
   trial_duration: 4000
@@ -136,6 +142,16 @@ var procedure = {
 }
 
 timeline.push(procedure)
+
+/*optional comment*/
+var comment = {
+  type: jsPsychSurveyText,
+  questions: [
+    {prompt: 'If you have any comments about your experience doing the experiment, you can write them here'}
+  ]
+}
+
+timeline.push(comment);
 
 /* create thank-you node */
 var thanks = {
