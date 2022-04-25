@@ -6,7 +6,7 @@ var jsPsych = initJsPsych({
   },
   on_finish: function() {
    console.log(jsPsych.data.get().csv());
-   /*window.location = 'https://github.com/alberteseeberg'*/
+   window.location = 'https://github.com/alberteseeberg'
   }
 });
 
@@ -55,7 +55,7 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
   /* preload audiofiles*/
   var preload = {
     type: jsPsychPreload,
-    sound_files: window['UK_sound_files_' + Math.floor((Math.random() * 6) + 1)],
+    sound_files: window['UK_sound_files_' + Math.floor((Math.random() * 6) + 1)]
   }
   timeline.push(preload);
 
@@ -76,9 +76,15 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
         required: true
       },
       {
-        prompt: "Are you a bilingual speaker of Danish and English?",
+        prompt: "Are you a native Danish speaker with English as a second language?",
         name: 'language',
         options: ['Yes', 'No']
+        required: true
+      },
+      {
+        prompt: "How would you describe your English language skills?"
+        name: 'english'
+        options: ['Basic', 'Conversational', 'Fluent', 'Native-like proficiency']
         required: true
       }    
     ],
@@ -132,14 +138,23 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
     button_html: '<button class="jspsych-btn"><img src="%choice%" height="200" width="200"/></button>',
     response_allowed_while_playing: true,
     response_ends_trial: false,
-    trial_duration: 4000
+    trial_duration: 5000,
+    data: jsPsych.timelineVariable('data'),
+    on_finish: function(data){
+      var correct = false;
+      if(data.answer == data.response && data.rt > -1){
+        correct = true;
+      }
+      data.correct = correct;
+    }
   };
 
 
   /* define procedure for trials*/
   var procedure = {
     timeline: [audio_trial],
-    timeline_variables: sound_files,
+    /*timeline_variables: sound_files,*/   
+    timeline_variables: window['UK_sound_files_' + Math.floor((Math.random() * 6) + 1)],
     randomize_order: false
   }
 
@@ -211,7 +226,7 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
   /* preload audiofiles*/
   var preload = {
     type: jsPsychPreload,
-    sound_files: window['DK_sound_files_' + Math.floor((Math.random() * 6) + 1)],
+    sound_files: window['DK_sound_files_' + Math.floor((Math.random() * 6) + 1)]
   }
   timeline.push(preload);
 
@@ -232,9 +247,15 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
         required: true
       },
       {
-        prompt: "Taler du både dansk og engelsk?",
+        prompt: "Har du dansk som modersmål og engelsk som andetsprog?",
         name: 'sprog',
         options: ['Ja', 'Nej']
+        required: true
+      },
+      {
+        prompt: "Hvordan vil du beskrive dine sprogfærdigheder i engelsk"
+        name: 'engelsk'
+        options: ['Basisniveau', 'Samtaleniveau', 'Flydende', 'Modersmålsniveau']
         required: true
       }    
     ],
@@ -288,14 +309,24 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
     button_html: '<button class="jspsych-btn"><img src="%choice%" height="200" width="200"/></button>',
     response_allowed_while_playing: true,
     response_ends_trial: false,
-    trial_duration: 4000
+    trial_duration: 5000,
+    data: jsPsych.timelineVariable('data'),
+    on_finish: function(data){
+      var correct = false;
+      if(data.answer == data.response && data.rt > -1){
+        correct = true;
+      }
+      data.correct = correct;
+    }
   };
 
 
   /* define procedure for trials*/
   var procedure = {
     timeline: [audio_trial],
-    timeline_variables: sound_files,
+    // timeline_variables: sound_files,
+    timeline_variables: window['DK_sound_files_' + Math.floor((Math.random() * 6) + 1)],
+    // timeline_variables: window['DK_sound_files_1'],
     randomize_order: false
   }
 
