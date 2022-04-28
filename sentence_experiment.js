@@ -6,9 +6,25 @@ var jsPsych = initJsPsych({
   },
   on_finish: function() {
    console.log(jsPsych.data.get().csv());
-   window.location = 'https://github.com/alberteseeberg'
   }
 });
+
+/* add data properties */
+jsPsych.data.addProperties({start_time: (new Date()).toISOString()});
+/* this is for allocating participant numbers*/
+var participant_id = jsPsych.data.getURLVariable('participant');
+var subject_id = jsPsych.randomization.randomID(8);
+jsPsych.data.addProperties({participant: subject_id});
+/* add properties from prolific */
+var prol_id = jsPsych.data.getURLVariable('PROLIFIC_PID');
+var study_id = jsPsych.data.getURLVariable('STUDY_ID');
+var session_id = jsPsych.data.getURLVariable('SESSION_ID');
+
+jsPsych.data.addProperties({
+    prol_id: prol_id,
+    study_id: study_id,
+    session_id: session_id,
+  });
 
 /* create timeline */
 var timeline = [];
@@ -60,7 +76,7 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
   timeline.push(preload);
 
   /*demographics trial*/
-  /*var demo = {
+  var demo = {
     type: jsPsychSurveyMultiChoice,
     questions: [
       {
@@ -78,18 +94,18 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
       {
         prompt: "Are you a native Danish speaker with English as a second language?",
         name: 'language',
-        options: ['Yes', 'No']
+        options: ['Yes', 'No'],
         required: true
       },
       {
-        prompt: "How would you describe your English language skills?"
-        name: 'english'
-        options: ['Basic', 'Conversational', 'Fluent', 'Native-like proficiency']
+        prompt: "How would you describe your English language skills?",
+        name: 'english',
+        options: ['Basic', 'Conversational', 'Fluent', 'Native-like proficiency'],
         required: true
       }    
     ],
   };
-  timeline.push(demo); */
+  timeline.push(demo);
 
   /* check sound*/
   var calibrate = {
@@ -100,7 +116,7 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
       "<p>When you have adjusted the sound to a comfortable level, press 'Continue'.</p>" 
     ], 
     show_clickable_nav: true,
-    button_label: "Continue",
+    button_label_next: "Continue"
   };
 
   loop_calibrate = {
@@ -128,6 +144,13 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
     fullscreen_mode: true
   });
 
+  /*define intertrial interval*/
+  var interval = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: "+",
+    choices: "NO_KEYS",
+    trial_duration: 300
+  };
 
   /*define audio trial*/
   var audio_trial = {
@@ -152,7 +175,7 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
 
   /* define procedure for trials*/
   var procedure = {
-    timeline: [audio_trial],
+    timeline: [interval, audio_trial],
     /*timeline_variables: sound_files,*/   
     timeline_variables: window['UK_sound_files_' + Math.floor((Math.random() * 6) + 1)],
     randomize_order: false
@@ -174,12 +197,21 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
   var thanks = {
     type: jsPsychInstructions,
     pages: ['<p>Thank you very much for participating!</p>'],
+    button_label_next: 'Continue',
     allow_keys: false,
     show_clickable_nav: true,
     on_load: function () {
       saveData(subject_id + '_browserinteraction_data_rep.csv', jsPsych.data.getInteractionData().csv())
       saveData(subject_id + '_switch_data_rep.csv', jsPsych.data.get().csv()); 
     }
+  }
+
+  /* create close-browser node */
+  var close_page = {
+    type: jsPsychInstructions,
+    pages: ['<p>Your data have been saved, feel free to close this window.</p>'],
+    allow_keys: false,
+    show_clickable_nav: false,
   }
 
 } else {
@@ -190,7 +222,7 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
     pages: [
       '<h2><b>Instruktioner</b></h2>' +
       '<p>I dette forsøg vil du høre nogle korte sætninger.</p>'+
-      '<p>For hver sætning vil du blive bedt om at identificere det overordnede tema, ved at klikke på et billede.</p>' +
+      '<p>For hver sætning vil du blive bedt om at identificere det <b>overordnede</b> tema, ved at klikke på et billede.</p>' +
       '<p>Temaerne er:</p>' +
       '<br>' +
       '<img src="images/animal1.png" height="200" width="200"></img>' +
@@ -231,8 +263,9 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
   timeline.push(preload);
 
   /*demographics trial*/
-  /*var demo = {
+  var demo = {
     type: jsPsychSurveyMultiChoice,
+    button_label: 'Fortsæt',
     questions: [
       {
         prompt: "Køn", 
@@ -249,18 +282,18 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
       {
         prompt: "Har du dansk som modersmål og engelsk som andetsprog?",
         name: 'sprog',
-        options: ['Ja', 'Nej']
+        options: ['Ja', 'Nej'],
         required: true
       },
       {
-        prompt: "Hvordan vil du beskrive dine sprogfærdigheder i engelsk"
-        name: 'engelsk'
-        options: ['Basisniveau', 'Samtaleniveau', 'Flydende', 'Modersmålsniveau']
+        prompt: "Hvordan vil du beskrive dine sprogfærdigheder i engelsk",
+        name: 'engelsk',
+        options: ['Basisniveau', 'Samtaleniveau', 'Flydende', 'Modersmålsniveau'],
         required: true
-      }    
+      }  
     ],
   };
-  timeline.push(demo); */
+  timeline.push(demo);
 
   /* check sound*/
   var calibrate = {
@@ -271,7 +304,8 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
       "<p>Når du har justeret lyden til et behageligt niveau, så tryk 'Fortsæt'.</p>"
     ], 
     show_clickable_nav: true,
-    button_label: "Fortsæt",
+    button_label_previous: 'Forrige',
+    button_label_next: "Fortsæt"
   };
 
   loop_calibrate = {
@@ -296,9 +330,18 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
   /* enter fullscreen */
   timeline.push({
     type: jsPsychFullscreen,
-    fullscreen_mode: true
+    fullscreen_mode: true,
+    message: "<p>Eksperimentet vil blive vist i fuld skærm, når du trykker 'Fortsæt'</p>",
+    button_label: "Fortsæt"
   });
 
+  /*define intertrial interval*/
+  var interval = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: "+",
+    choices: "NO_KEYS",
+    trial_duration: 300
+  };
 
   /*define audio trial*/
   var audio_trial = {
@@ -323,10 +366,10 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
 
   /* define procedure for trials*/
   var procedure = {
-    timeline: [audio_trial],
+    timeline: [interval, audio_trial],
     // timeline_variables: sound_files,
-    timeline_variables: window['DK_sound_files_' + Math.floor((Math.random() * 6) + 1)],
-    // timeline_variables: window['DK_sound_files_1'],
+    timeline_variables: window['DK_sound_files_' + Math.floor((Math.random() * 6) + 1)], 
+    // timeline_variables: window['DK_sound_files_1'], //for testing purposes
     randomize_order: false
   }
 
@@ -337,7 +380,8 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
     type: jsPsychSurveyText,
     questions: [
       {prompt: 'Hvis du har nogle kommentarer til din oplevelse af eksperimentet, kan du skrive dem her.'}
-    ]
+    ],
+    button_label: 'Fortsæt'
   }
 
   timeline.push(comment);
@@ -346,6 +390,8 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
   var thanks = {
     type: jsPsychInstructions,
     pages: ['<p>Tusind tak for din deltagelse!</p>'],
+    button_label_previous: 'Forrige',
+    button_label_next: 'Fortsæt',
     allow_keys: false,
     show_clickable_nav: true,
     on_load: function () {
@@ -353,9 +399,18 @@ if (Math.floor((Math.random() * 2) + 1) == 1) {
       saveData(subject_id + '_switch_data_rep.csv', jsPsych.data.get().csv()); 
     }
   }
+
+  /* create close-browser node */
+  var close_page = {
+    type: jsPsychInstructions,
+    pages: ['<p>Dine data er gemt nu - du må gerne lukke dette vindue.</p>'],
+    allow_keys: false,
+    show_clickable_nav: false,
+  }
 }
 
 timeline.push(thanks);
+timeline.push(close_page);
 
 /* saving data */
 function saveData(name, data){
