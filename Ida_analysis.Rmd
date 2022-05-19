@@ -1,0 +1,716 @@
+---
+title: "plots"
+output: html_document
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#Setting working directory
+knitr::opts_knit$set(root.dir = "C:/Users/Ida/OneDrive - Aarhus Universitet/Speciale - praktik/language switching experiment")
+# knitr::opts_knit$set(root.dir = "/Users/au183362/Documents/postdoc/NeDComm/interns/Ida_Styrbæk_Møller/sentence-topics")
+
+# install.packages("pacman")
+
+# pacman::p_load(dplyr, tibble, tidyverse, data.table, stringr)
+pacman::p_load(jsonlite, psychTestR, dplyr, tibble, tidyverse, data.table, stringr, glue, Rcpp, lme4, ggplot2, plyr, readr, yarrr, tidyr, emmeans)
+
+
+```
+
+```{r}
+
+#root_dir <- "C:/Users/Ida/OneDrive - Aarhus Universitet/Speciale - praktik/language switching experiment"
+
+#loading data - merge csv-files with bind_rows
+# data_all <- list.files(path = "/Users/au183362/Documents/postdoc/NeDComm/interns/Ida_Styrbæk_Møller/sentence-topics/server_data", pattern = "*.csv", full.names = TRUE) %>%
+data_all <- list.files(path = "C:/Users/Ida/OneDrive - Aarhus Universitet/Speciale - praktik/language switching experiment/analysis/server_data", pattern = "*.csv", full.names = TRUE) %>%
+  # Store all files in list
+  lapply(read.csv) %>%   
+   # Combine data sets into one data set 
+  bind_rows                                         
+
+```
+
+```{r, echo=FALSE}
+#pull demographics from data_all
+demo <- cbind(bind_rows(lapply(data_all$response[data_all$trial_type=="survey-multi-choice"], parse_json)), 
+              data_all$participant[data_all$trial_type=="survey-multi-choice"])
+names(demo)[names(demo) == 'data_all$participant[data_all$trial_type == "survey-multi-choice"]'] <- "participant"
+
+#split demo
+demo1 <- demo[,c(1:5,11)]
+
+demo2 <- demo[,c(6:11)]
+
+#drop missing values
+demo1 <- demo1 %>% drop_na()
+demo2 <- demo2 %>% drop_na()
+# demo1 <- na.omit(demo1)
+# demo2 <- na.omit(demo2)
+
+#create condition column
+demo1 <- demo1 %>% mutate(condition = "L1 → L2")
+demo2 <- demo2 %>% mutate(condition = "L2 → L1")
+
+#rename columns in demo1
+colnames(demo1)
+colnames(demo2)
+
+names(demo2)[names(demo2) == "prior knowledge"] <- "prior_knowledge"
+names(demo1)[names(demo1) == "kÃ¸n"] <- "sex"
+# names(demo1)[names(demo1) == "køn"] <- "sex"
+# names(demo1)[names(demo1) == "k<c3><b8>n"] <- "sex"
+names(demo1)[names(demo1) == "alder"] <- "age"
+names(demo1)[names(demo1) == "sprog"] <- "language"
+names(demo1)[names(demo1) == "engelsk"] <- "english"
+names(demo1)[names(demo1) == "forhÃ¥ndsviden"] <- "prior_knowledge"
+# names(demo1)[names(demo1) == "forhåndsviden"] <- "prior_knowledge"
+# names(demo1)[names(demo1) == "forh<c3><a5>ndsviden"] <- "prior_knowledge"
+
+#rename values
+demo1 <- demo1 %>% mutate(sex = recode(sex, 'Mand' = 'Male', 'Kvinde' = 'Female'))
+demo1 <- demo1 %>% mutate(language = recode(language, 'Ja' = 'Yes', 'Nej' = 'No'))
+demo1 <- demo1 %>% mutate(english = recode(english, 'Basisniveau' = 'Basic', 'Samtaleniveau' = 'Conversational', 'Flydende' = 'Fluent', 'ModersmÃ¥lsniveau' = 'Native-like proficiency'))
+# demo1 <- demo1 %>% mutate(english = recode(english, 'Basisniveau' = 'Basic', 'Samtaleniveau' = 'Conversational', 'Flydende' = 'Fluent', 'Modersmålsniveau' = 'Native-like proficiency'))
+# demo1 <- demo1 %>% mutate(english = recode(english, 'Basisniveau' = 'Basic', 'Samtaleniveau' = 'Conversational', 'Flydende' = 'Fluent', 'Modersm<c3><a5>lsniveau' = 'Native-like proficiency'))
+demo1 <- demo1 %>% mutate(prior_knowledge = recode(prior_knowledge, 'Ja' = 'Yes', 'Nej' = 'No'))
+
+#merge dataframes with bind_rows
+demo <- bind_rows(demo1, demo2)
+
+merge_demo <- demo[,c("prior_knowledge", "english", "participant")]
+```
+
+```{r}
+########DEMOGRAPHICS DESCRIPTIVES#########
+table(demo$age)
+table(demo$english)
+table(demo$condition)
+table(demo$prior_knowledge)
+
+table(demo$sex, demo$age)
+table(demo$english, demo$age)
+
+```
+
+```{r, echo=FALSE, verbose=FALSE}
+
+# selecting only the actual trials (not e.g. demographics or fixation cross)
+data_audio <- data_all[data_all$trial_type=="audio-button-response",]
+
+data_audio <- merge(data_audio, merge_demo, by="participant")
+
+#Make rt-values numeric (null -> NA)
+data_audio$rt <- sapply(lapply(data_audio$rt, as.numeric), unclass)
+
+#Saving a full version of data_audio before rejecting participants
+data_audio_full <- data_audio
+
+#Rejecting based on prior-knowledge
+data_audio <- data_audio[data_audio$prior_knowledge=="No",]
+
+#recode correct
+data_audio <- data_audio %>% mutate(correct = recode(correct, 'true' = TRUE, 'false' = FALSE))
+
+# load onset data
+onset <- read.csv("analysis/all_files_onset.csv")
+#rename column
+# colnames(onset)
+# names(onset)[names(onset) == "sound"] <- "stimulus"
+
+#Add onset and offset column in data_audio
+data_audio <- merge(onset, data_audio, by="stimulus")
+
+#rt_offset column in data_audio
+data_audio <- data_audio %>% mutate(rt_offset = rt - offset)
+
+#new column in data_audio - switch
+data_audio <- data_audio %>% mutate(switch = recode(match, '0' = '0', '1' = '0', '2' = '1', '3' = '1'))
+
+#new column in data_audio - condition
+data_audio <- data_audio %>% mutate(condition = 
+                                      ifelse(((switch == 0 & lang == "D") | 
+                                                (switch == 1 & lang == "E")), "L1 → L2", "L2→ L1"))
+
+
+#Rejecting based on criterion of at least 60% correct
+correct_criterion <- data_audio %>% group_by(participant) %>% dplyr::summarize(avg_correct = mean(correct))
+correct_reject <- correct_criterion$participant[correct_criterion$avg_correct<0.6]
+data_audio <- data_audio[data_audio$participant!=correct_reject,]
+
+#factor data in data_audio
+data_audio$participant <- factor(data_audio$participant)
+data_audio$stimulus <- factor(data_audio$stimulus)
+data_audio$answer <- factor(data_audio$answer)
+
+# data_audio <- data_audio %>% drop_na(rt_offset)
+
+#capitalize true and false. If they??re already capitalized it makes them all false
+#b <- b %>% mutate(correct = ifelse(correct == "true", TRUE, FALSE))
+
+#select only correct responses
+correct <- data_audio[data_audio_correct$correct,]
+
+#add rt_offset column
+# correct <- correct %>% mutate(rt_offset = rt - offset)
+
+#select only targets
+target <- correct[correct$match>1,]
+target_all <- data_audio[data_audio$match>1,]
+
+#new column in target - rt_onset
+# target <- target %>% mutate(rt_onset = rt - onset)
+
+#select fillers
+filler <- correct[correct$match<2,]
+
+#factor data
+target$lang <- factor(target$lang)
+
+target$match <- factor(target$match)
+
+#calculate mean RTs of correct responses
+means <- ddply(correct, .(stimulus, lang), summarize,  rt=mean(rt, na.rm=TRUE))
+
+#means of all responses
+means_all <- ddply(data_audio, .(stimulus, lang), summarize,  rt=mean(rt, na.rm=TRUE))
+
+#merge onset and means dataframes
+means <- merge(onset, means, by="stimulus")
+means_all <- merge(onset, means_all, by="stimulus")
+
+#select rt_offset over 0 in correct
+glmer_correct <- correct[correct$rt_offset>0,]
+
+#target corrected
+target_corrected <- target[target$rt_offset>-101,]
+
+#target corrected
+correct_corrected <- correct[correct$rt_offset>-101,]
+
+#glmer target
+glmer_target <- target[target$rt_offset>0,]
+```
+
+MOST RELEVANT PLOTS
+```{r, echo=FALSE}
+
+data_audio <- data_audio %>% mutate(answer = recode(answer, '0' = 'animals', '1' = 'people', '2' = 'food', '3' = 'none of these'))
+
+#########SCATTER PLOT OF OFFSET AND MEAN RT############
+#########TO SHOW WHY WE SUBTRACT OFFSET###########
+#scatter plot of offset and rt - means
+means %>%  ggplot(aes(x = offset, y = rt)) + geom_point() + ggtitle("Offset and mean RT (correct responses)") + ylim(1500, 5000)
+means_all %>%  ggplot(aes(x = offset, y = rt)) + geom_point() + ggtitle("Offset and mean RT") + ylim(1500, 5000)
+
+#########HISTOGRAM OF RT_OFFSET FOR ALL RESPONSES#########
+data_audio %>% as_tibble() %>% group_by(switch) %>% ggplot(aes(rt_offset, color=switch)) + geom_histogram(binwidth = 50, fill="white", position="dodge") + ggtitle("RT (offset subtracted)")
+
+#########VARIANCE ACROSS CATEGORIES (FOR ALL RESPONSES)##############
+#########TO SHOW WHY WE INCLUDE ANSWER AS A RANDOM EFFECT##################
+#rt across category
+data_audio %>% as_tibble() %>% group_by(answer) %>% ggplot(aes(rt, color=answer)) + geom_histogram(binwidth = 50, fill="white", position="dodge") + ggtitle("RT across different categories")
+
+#rt_offset across category
+data_audio %>% as_tibble() %>% group_by(answer) %>% ggplot(aes(rt_offset, color=answer)) + geom_histogram(binwidth = 50, fill="white", position="dodge") + ggtitle("RT(offset subtracted) across different categories")
+
+#rt across category (for false responses)
+data_audio %>% filter(correct == FALSE) %>% as_tibble() %>% group_by(answer) %>% ggplot(aes(rt, color=answer)) + geom_histogram(binwidth = 50, fill="white", position="dodge") + ggtitle("RT across different categories (incorrect responses)")
+
+#rt_offset across category (for false responses)
+data_audio %>% filter(correct == FALSE) %>% as_tibble() %>% group_by(answer) %>% ggplot(aes(rt_offset, color=answer)) + geom_histogram(binwidth = 50, fill="white", position="dodge") + ggtitle("RT(offset subtracted) across different categories (incorrect responses)")
+
+```
+
+```{r, echo=FALSE}
+
+#distribution of RT for correct responses
+data_audio %>% filter(correct == TRUE) %>% as_tibble() %>% ggplot(aes(rt)) + geom_histogram(binwidth = 30)
+
+#correct responses across category
+data_audio %>% filter(correct == TRUE) %>% as_tibble() %>% group_by(answer) %>% ggplot(aes(rt, color=answer)) + geom_histogram(binwidth = 50, fill="white", position="dodge")
+
+#rt_offset across language
+glmer_target %>% as_tibble() %>% group_by(lang) %>% ggplot(aes(rt_offset, color=lang)) + geom_histogram(binwidth = 50, fill="white", position="dodge")
+```
+
+```{r}
+correct %>% filter(lang == 'D') %>% as_tibble() %>% ggplot(aes(rt_offset)) + geom_histogram(binwidth = 30) + ggtitle("Danish")
+
+correct %>% filter(lang == 'E') %>% as_tibble() %>% ggplot(aes(rt_offset)) + geom_histogram(binwidth = 30) + ggtitle("English")
+
+correct %>% as_tibble() %>% group_by(lang) %>% ggplot(aes(rt_offset, color=lang)) + geom_histogram(binwidth = 50, fill="white", position="dodge")
+
+correct %>% as_tibble() %>% group_by(switch) %>% ggplot(aes(rt_offset, color=switch)) + geom_histogram(binwidth = 50, fill="white", position="dodge") + ggtitle("RT (w/ offset subtracted) for correct responses")
+
+correct_corrected %>% as_tibble() %>% group_by(switch) %>% ggplot(aes(rt_offset, color=switch)) + geom_histogram(binwidth = 50, fill="white", position="dodge") + ggtitle("RT (w/ offset subtracted) for correct responses (rt_offset>-101 excluded)")
+
+boxplot(rt_offset ~ switch*lang, col=c("white","lightgray"),correct)
+```
+
+IKKE SÅ VIGTIGT
+
+```{r, echo=FALSE}
+####Tons of plots
+
+#plot of stimuli and rt - stacked
+data_audio %>% filter(correct == TRUE) %>% as_tibble() %>% ggplot(aes(x = stimulus, y = rt)) + geom_col() + guides(x = guide_axis(angle = 90)) 
+
+#plot of stimuli and offset times
+onset %>% ggplot(aes(x = stimulus, y = offset)) + geom_col() + guides(x = guide_axis(angle = 90)) 
+
+#plot of stimuli and mean rt
+means %>% ggplot(aes(x = stimulus, y = rt)) + geom_col() + guides(x = guide_axis(angle = 90)) 
+
+#danish mean rt
+means %>% filter(lang == "D") %>% as_tibble() %>%  ggplot(aes(x = stimulus, y = rt)) + geom_col() + guides(x = guide_axis(angle = 90)) + ggtitle("Mean rt - Danish") 
+
+#Danish offset times
+means %>% filter(lang == "D") %>% as_tibble() %>%  ggplot(aes(x = stimulus, y = offset)) + geom_col() + guides(x = guide_axis(angle = 90)) + ggtitle("Onset times - Danish") 
+
+#English mean rt
+means %>% filter(lang == "E") %>% as_tibble() %>%  ggplot(aes(x = stimulus, y = rt)) + geom_col() + guides(x = guide_axis(angle = 90)) + ggtitle("Mean rt - English")
+
+#English offset times
+means %>% filter(lang == "E") %>% as_tibble() %>%  ggplot(aes(x = stimulus, y = offset)) + geom_col() + guides(x = guide_axis(angle = 45)) + ggtitle("Onset times - English")
+
+#scatter plot of offset and rt - means
+means %>%  ggplot(aes(x = offset, y = rt)) + geom_point() + ggtitle("Offset and mean RT")
+
+#histograms of rt_offset
+target %>%  ggplot(aes(x = stimulus, y = rt_offset)) + geom_col() + guides(x = guide_axis(angle = 45)) + ggtitle("rt_offset")
+
+target %>% ggplot(aes(rt_offset)) + geom_histogram(binwidth = 30)
+
+target_corrected %>% ggplot(aes(rt_offset)) + geom_histogram(binwidth = 30)
+
+#histogram of rt_offset - DK - overlap
+target %>% filter(lang == "D") %>% filter(match == "3") %>% as_tibble() %>% ggplot(aes(rt_offset)) + geom_histogram(binwidth = 30) + ggtitle("DK - overlap") + xlim(-1500, 5000)
+
+#histogram of rt_offset - DK - non-overlap
+target %>% filter(lang == "D") %>% filter(match == "2") %>% as_tibble() %>% ggplot(aes(rt_offset)) + geom_histogram(binwidth = 30) + ggtitle("DK - non-overlap") + xlim(-1500, 5000)
+
+#histogram of rt_offset - UK - overlap
+target %>% filter(lang == "E") %>% filter(match == "3") %>% as_tibble() %>% ggplot(aes(rt_offset)) + geom_histogram(binwidth = 30) + ggtitle("UK - overlap") + xlim(-1500, 5000)
+
+#histogram of rt_offset - UK - non-overlap
+target %>% filter(lang == "E") %>% filter(match == "2") %>% as_tibble() %>% ggplot(aes(rt_offset)) + geom_histogram(binwidth = 30) + ggtitle("UK - non-overlap") + xlim(-1500, 5000)
+
+```
+
+```{r, echo=FALSE}
+#########SWITCH COSTS##############
+########FOR SORTED DATA#########
+
+temp = correct_corrected
+pirat_data = aggregate(temp$rt_offset, by = list(temp$switch, temp$participant, temp$lang, temp$condition), mean)
+pirat_data = rename(pirat_data, c("Group.1" = "switch", "Group.2" = "participant", "Group.3" = "lang", "Group.4" = "condition", "x" = "rt_offset"))
+
+# pirateplot(formula = rt_offset ~ switch + lang, data = pirat_data, main = "RT (w/ offset subtracted)", xlab = "Language",ylab="RT (minus offset)", ylim= c(-200,5000), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  # abline(a=0, b=0, lwd=1, lty="dashed")
+
+# pirateplot(formula = rt_offset ~ lang + switch, data = pirat_data, main = "RT (w/ offset subtracted)", xlab = "Language",ylab="RT (minus offset)", ylim= c(-200,5000), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  # abline(a=0, b=0, lwd=1, lty="dashed")
+
+pirateplot(formula = rt_offset ~ switch + condition, data = pirat_data, main = "RT (w/ offset subtracted)", xlab = "Language",ylab="RT (minus offset)", ylim= c(-200, 2800), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  abline(a=0, b=0, lwd=1, lty="dashed")
+```
+```{r, echo=FALSE}
+#########SWITCH COSTS##############
+########FOR ALL DATA#########
+
+temp = data_audio
+temp <- temp %>% drop_na(rt_offset)
+pirat_data = aggregate(temp$rt_offset, by = list(temp$switch, temp$participant, temp$condition), mean)
+pirat_data = rename(pirat_data, c("Group.1" = "switch", "Group.2" = "participant", "Group.3" = "condition", "x" = "rt_offset"))
+
+
+pirateplot(formula = rt_offset ~ switch + condition, data = pirat_data, main = "RT (w/ offset subtracted)", xlab = "Language",ylab="RT (minus offset)", ylim= c(-200, 2800), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  abline(a=0, b=0, lwd=1, lty="dashed")
+```
+
+
+```{r, echo=FALSE}
+#########PHONETIC OVERLAP##############
+#########SORTED DATA##########
+
+temp = target_corrected
+pirat_data = aggregate(temp$rt_offset, by = list(temp$match, temp$participant, temp$lang, temp$condition), mean)
+pirat_data = rename(pirat_data, c("Group.1" = "match", "Group.2" = "participant", "Group.3" = "lang", "Group.4" = "condition", "x" = "rt_offset"))
+
+# pirateplot(formula = rt_offset ~ match + lang, data = pirat_data, main = "RT (w/ offset subtracted)", xlab = "Language",ylab="RT (minus offset)", ylim= c(-200, 2800), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  # abline(a=0, b=0, lwd=1, lty="dashed")
+
+# pirateplot(formula = rt_offset ~ lang + match, data = pirat_data, main = "RT (w/ offset subtracted)", xlab = "Language",ylab="RT (minus offset)", ylim= c(-200, 2800), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  # abline(a=0, b=0, lwd=1, lty="dashed")
+
+pirateplot(formula = rt_offset ~ match + condition, data = pirat_data, main = "RT (w/ offset subtracted)", xlab = "Language",ylab="RT (minus offset)", ylim= c(-200, 2800), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  abline(a=0, b=0, lwd=1, lty="dashed")
+```
+```{r, echo=FALSE}
+#########PHONETIC OVERLAP##############
+#########ALL DATA##########
+
+temp = target_all
+temp <- temp %>% drop_na(rt_offset)
+pirat_data = aggregate(temp$rt_offset, by = list(temp$match, temp$participant, temp$lang, temp$condition), mean)
+pirat_data = rename(pirat_data, c("Group.1" = "match", "Group.2" = "participant", "Group.3" = "lang", "Group.4" = "condition", "x" = "rt_offset"))
+names(pirat_data)[names(pirat_data) == "match"] <- "phonetic_overlap"
+pirat_data <- pirat_data %>% mutate(phonetic_overlap = recode(phonetic_overlap, '2' = 'non-overlap', '3' = 'overlap'))
+
+pirateplot(formula = rt_offset ~ phonetic_overlap + condition, data = pirat_data, main = "RT (w/ offset subtracted)", xlab = "Language",ylab="RT (minus offset)", ylim= c(-200, 2800), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  abline(a=0, b=0, lwd=1, lty="dashed")
+
+```
+
+
+```{r, echo=FALSE}
+###########RT DIFFERENCE BETWEEN FILLERS AND TARGETS######
+##########SORTED DATA################
+
+temp = correct_corrected
+pirat_data = aggregate(temp$rt_offset, by = list(temp$switch, temp$participant, temp$condition), mean)
+pirat_data = rename(pirat_data, c("Group.1" = "switch", "Group.2" = "participant", "Group.3" = "condition", "x" = "rt_offset"))
+pirat_data <- pivot_wider(pirat_data, names_from=switch, values_from=rt_offset)
+pirat_data <- rename(pirat_data, c("0" = "filler", "1" = "target"))
+pirat_data <- pirat_data %>% mutate(rt_diff = target-filler)
+
+pirateplot(formula = rt_diff ~ condition, data = pirat_data, main = "RT (difference)", xlab = "Condition (defined by filler language)",ylab="RT (difference)", ylim= c(-700,1000), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  abline(a=0, b=0, lwd=1, lty="dashed")
+
+```
+
+```{r, echo=FALSE}
+###########RT DIFFERENCE BETWEEN FILLERS AND TARGETS######
+###########ALL DATA################
+
+temp = data_audio
+temp <- temp %>% drop_na(rt_offset)
+pirat_data = aggregate(temp$rt_offset, by = list(temp$switch, temp$participant, temp$condition), mean)
+pirat_data = rename(pirat_data, c("Group.1" = "switch", "Group.2" = "participant", "Group.3" = "condition", "x" = "rt_offset"))
+pirat_data <- pivot_wider(pirat_data, names_from=switch, values_from=rt_offset)
+pirat_data <- rename(pirat_data, c("0" = "filler", "1" = "target"))
+pirat_data <- pirat_data %>% mutate(rt_diff = target-filler)
+
+pirateplot(formula = rt_diff ~ condition, data = pirat_data, main = "RT (difference)", xlab = "Condition (defined by filler language)",ylab="RT (difference)", ylim= c(-700,1000), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  abline(a=0, b=0, lwd=1, lty="dashed")
+
+```
+
+```{r, echo=FALSE}
+#######OVERLAP VS. NON-OVERLAP########
+##########SORTED DATA################
+
+temp = target_corrected
+pirat_data = aggregate(temp$rt_offset, by = list(temp$match, temp$participant, temp$lang), mean)
+pirat_data = rename(pirat_data, c("Group.1" = "match", "Group.2" = "participant", "Group.3" = "lang", "x" = "rt_offset"))
+pirat_data <- pivot_wider(pirat_data, names_from=match, values_from=rt_offset)
+pirat_data <- rename(pirat_data, c("2" = "non_overlap", "3" = "overlap"))
+pirat_data <- pirat_data %>% mutate(rt_diff = overlap-non_overlap)
+
+pirateplot(formula = rt_diff ~ lang, data = pirat_data, main = "RT (difference)", xlab = "Language",ylab="RT (difference)", ylim= c(-1000, 1200), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  abline(a=0, b=0, lwd=1, lty="dashed")
+
+```
+
+```{r, echo=FALSE}
+#######OVERLAP VS. NON-OVERLAP########
+##########ALL DATA################
+
+temp = target_all
+temp <- temp %>% drop_na(rt_offset)
+pirat_data = aggregate(temp$rt_offset, by = list(temp$match, temp$participant, temp$condition), mean)
+pirat_data = rename(pirat_data, c("Group.1" = "match", "Group.2" = "participant", "Group.3" = "condition", "x" = "rt_offset"))
+# pirat_data <- pirat_data %>% mutate(lang = recode(lang, 'D' = 'L1', 'E' = 'L2'))
+pirat_data <- pivot_wider(pirat_data, names_from=match, values_from=rt_offset)
+pirat_data <- rename(pirat_data, c("2" = "non_overlap", "3" = "overlap"))
+pirat_data <- pirat_data %>% mutate(rt_diff = overlap-non_overlap)
+
+pirateplot(formula = rt_diff ~ condition, data = pirat_data, main = "RT (difference)", xlab = "Language",ylab="RT (difference)", ylim= c(-1000, 1200), theme=2, pal="appletv", cex.lab = 1, cex.axis = 1, cex.names = 0.7, avg.line.o=0.8, bar.f.o = .2, bean.b.o = .7, point.o = 0.3, point.pch = 1, back.col = "white") +
+  abline(a=0, b=0, lwd=1, lty="dashed")
+
+```
+
+```{r, echo=FALSE}
+##########OVERLAP VS. NON-OVERLAP############
+##########ALL DATA##############
+
+########## Null model ##########
+null = lmer(rt_offset ~ (1|participant) + (1|stimulus) + (1|answer), data = target_all)
+
+#lang 
+m1 = lmer(rt_offset ~ lang + (1|participant) + (1|stimulus) + (1|answer), data = target_all)
+
+#match
+m2 = lmer(rt_offset ~ lang + match + (1|participant) + (1|stimulus) + (1|answer), data = target_all)
+
+#lang*match
+m3 = lmer(rt_offset ~ lang*match + (1|participant) + (1|stimulus) + (1|answer), data = target_all)
+
+########## Model Comparison ##########
+anova(null, m1, m2, m3)
+
+```
+
+RET LANG TIL CONDITION OG MATCH TIL OVERLAP
+```{r, echo=FALSE}
+##########OVERLAP VS. NON-OVERLAP############
+##########ALL DATA##############
+
+names(target_all)[names(target_all) == "match"] <- "overlap"
+
+########## Null model ##########
+null = lmer(rt_offset ~ (1|participant) + (1|stimulus) + (1|answer), data = target_all)
+
+#lang 
+m1 = lmer(rt_offset ~ condition + (1|participant) + (1|stimulus) + (1|answer), data = target_all)
+
+#match
+m2 = lmer(rt_offset ~ condition + overlap + (1|participant) + (1|stimulus) + (1|answer), data = target_all)
+
+#lang*match
+m3 = lmer(rt_offset ~ condition*overlap + (1|participant) + (1|stimulus) + (1|answer), data = target_all)
+
+########## Model Comparison ##########
+anova(null, m1, m2, m3)
+
+```
+
+```{r, echo=FALSE}
+
+##########OVERLAP VS. NON-OVERLAP############
+##########SORTED DATA##############
+
+########## Null model ##########
+null = lmer(rt_offset ~ (1|participant) + (1|stimulus) + (1|answer), data = target_corrected)
+
+#lang 
+m1 = lmer(rt_offset ~ lang + (1|participant) + (1|stimulus) + (1|answer), data = target_corrected)
+
+#match
+m2 = lmer(rt_offset ~ lang + match + (1|participant) + (1|stimulus) + (1|answer), data = target_corrected)
+
+#lang*match
+m3 = lmer(rt_offset ~ lang*match + (1|participant) + (1|stimulus) + (1|answer), data = target_corrected)
+
+########## Model Comparison ##########
+anova(null, m1, m2, m3)
+
+```
+
+```{r, echo=FALSE}
+
+##########SWITCH VS. NON-SWITCH TRIALS############
+##########ALL DATA##############
+
+########## Null model ##########
+null = lmer(rt_offset ~ (1|participant) + (1|stimulus) + (1|answer), data = data_audio)
+
+#switch
+m1 = lmer(rt_offset ~ switch + (1|participant) + (1|stimulus) + (1|answer), data = data_audio)
+
+#switch + lang
+m2 = lmer(rt_offset ~ switch + condition + (1|participant) + (1|stimulus) + (1|answer), data = data_audio)
+
+#switch*lang
+m3 = lmer(rt_offset ~ switch*condition + (1|participant) + (1|stimulus) + (1|answer), data = data_audio)
+
+########## Model Comparison ##########
+anova(null, m1, m2, m3)
+
+```
+
+```{r, echo=FALSE}
+
+##########SWITCH VS. NON-SWITCH TRIALS############
+##########SORTED DATA##############
+
+########## Null model ##########
+null = lmer(rt_offset ~ (1|participant) + (1|stimulus) + (1|answer), data = correct_corrected)
+
+#switch
+m1 = lmer(rt_offset ~ switch + (1|participant) + (1|stimulus) + (1|answer), data = correct_corrected)
+
+#switch + lang
+m2 = lmer(rt_offset ~ switch + condition + (1|participant) + (1|stimulus) + (1|answer), data = correct_corrected)
+
+#switch*lang
+m3 = lmer(rt_offset ~ switch*condition + (1|participant) + (1|stimulus) + (1|answer), data = correct_corrected)
+
+########## Model Comparison ##########
+anova(null, m1, m2, m3)
+
+```
+
+## Best model
+```{r}
+qqnorm(resid(null))
+plot(null)
+
+qqnorm(resid(m1))
+plot(m1)
+```
+
+Check with glmer analysis
+```{r, echo=FALSE}
+glmer_data <- data_audio[data_audio$rt_offset>0,]
+
+########## Null model ##########
+Null = glmer(rt_offset ~ (1|participant) + (1|stimulus) + (1|answer), data = glmer_data, family=gaussian(link='log'))
+# summary(Null)
+
+########## MAIN EFFECTS #############
+# offset
+M1 = glmer(rt_offset ~ switch + (1|participant) + (1|stimulus) + (1|answer), data = glmer_data, family=gaussian(link='log'))
+# summary(M1)
+
+# offset + language
+M2 = glmer(rt_offset ~ switch + condition + (1|participant) + (1|stimulus) + (1|answer), data = glmer_data, family=gaussian(link='log'))
+#summary(M2)
+
+# offset + lang*match
+M3 = glmer(rt_offset ~ switch*condition + (1|participant) + (1|stimulus) + (1|answer), data = glmer_data, family=gaussian(link='log'))
+#summary(M3)
+
+
+########## Model Comparison ##########
+anova(Null, M1, M2, M3)
+# anova(Null, M1)
+# anova(Null, M2)
+# anova(Null, M3)
+```
+
+```{r}
+pacman::p_load(MuMIn, piecewiseSEM)
+MuMIn::r.squaredGLMM(m1)
+# R squared marginal: the variance explained by the fixed effects
+# R squared conditional the variance explained by the entire model 
+```
+
+## Post-hoc analysis
+```{r}
+emm_g <- emmeans(m1, pairwise ~ switch, adjust = "none")
+emm_g[[2]]
+
+confint(rbind(emm_g[[2]]), adjust ="none")
+
+
+#Per deviant - T2
+emm_r <- emmeans(m3, pairwise ~ switch)
+emm_rc <- emm_r[[2]]
+
+emm_d <- emmeans(m3, pairwise ~ condition)
+emm_dc <- emm_d[[2]]
+
+#Time by deviant interaction
+
+emm_r.d <- emmeans(m3, pairwise ~ switch | condition)
+IC_r.d <- contrast(emm_r.d[[1]], method = "pairwise")
+
+emm_d.r <- emmeans(m3, pairwise ~ condition | switch)
+IC_d.r <- contrast(emm_d.r[[1]], method = "pairwise")
+
+rbind(IC_r.d, adjust = "none")
+confint(rbind(IC_r.d,  adjust = 'none'))
+
+rbind(IC_d.r, adjust = "none")
+confint(rbind(IC_d.r,  adjust = 'none'))
+
+```
+
+
+FORGET ABOUT THIS
+glmer models - We dropped those
+
+```{r, echo=FALSE}
+########## Null model ##########
+Null = glmer(rt ~ (1|participant) + (1|stimulus) + (1|answer), data = target, family=gaussian(link='log'))
+# summary(Null)
+
+########## MAIN EFFECTS #############
+# offset
+M1 = glmer(rt ~ offset + (1|participant) + (1|stimulus) + (1|answer), data = target, family=gaussian(link='log'))
+# summary(M1)
+
+# offset + language
+M2 = glmer(rt ~ offset + lang + (1|participant) + (1|stimulus) + (1|answer), data = target, family=gaussian(link='log'))
+#summary(M2)
+
+# offset + lang + match
+M3 = glmer(rt ~ offset + lang + match + (1|participant) + (1|stimulus) + (1|answer), data = target, family=gaussian(link='log'))
+#summary(M3)
+
+# offset*lang + match
+M4 = glmer(rt ~ offset*lang + match + (1|participant) + (1|stimulus) + (1|answer), data = target, family=gaussian(link='log'))
+# #summary(M4)
+
+# offset*lang + onset*match
+M5 = glmer(rt ~ offset*lang + onset*match + (1|participant) + (1|stimulus) + (1|answer), data = target, family=gaussian(link='log'))
+# #summary(M5)
+
+# offset*lang + onset*match + lang*match
+M6 = glmer(rt ~ offset*lang + onset*match + lang*match + (1|participant) + (1|stimulus) + (1|answer), data = target, family=gaussian(link='log'))
+# #summary(M6)
+
+# offset*lang*match
+M7 = glmer(rt ~ offset*lang*match + (1|participant) + (1|stimulus) + (1|answer), data = target, family=gaussian(link='log'))
+# #summary(M7)
+
+########## Model Comparison ##########
+anova(Null, M1, M2, M3, M4, M5, M6, M7)
+# anova(Null, M1)
+# anova(Null, M2)
+# anova(Null, M3)
+```
+
+```{r, echo=FALSE}
+########## Null model ##########
+Null = glmer(rt_offset ~ (1|participant) + (1|stimulus) + (1|answer), data = glmer_target, family=gaussian(link='log'))
+# summary(Null)
+
+########## MAIN EFFECTS #############
+# offset
+M1 = glmer(rt_offset ~ lang + (1|participant) + (1|stimulus) + (1|answer), data = glmer_target, family=gaussian(link='log'))
+# summary(M1)
+
+# offset + language
+M2 = glmer(rt_offset ~ match + lang + (1|participant) + (1|stimulus) + (1|answer), data = glmer_target, family=gaussian(link='log'))
+#summary(M2)
+
+# offset + lang*match
+M3 = glmer(rt_offset ~ lang*match + (1|participant) + (1|stimulus) + (1|answer), data = glmer_target, family=gaussian(link='log'))
+#summary(M3)
+
+
+########## Model Comparison ##########
+anova(Null, M1, M2, M3)
+# anova(Null, M1)
+# anova(Null, M2)
+# anova(Null, M3)
+```
+
+```{r, echo=FALSE}
+########## Null model ##########
+Null = glmer(rt_offset ~ (1|participant) + (1|stimulus) + (1|answer), data = glmer_correct, family=gaussian(link='log'))
+# summary(Null)
+
+########## MAIN EFFECTS #############
+# offset
+M1 = glmer(rt_offset ~ switch + (1|participant) + (1|stimulus) + (1|answer), data = glmer_correct, family=gaussian(link='log'))
+# summary(M1)
+
+# offset + language
+M2 = glmer(rt_offset ~ switch + lang + (1|participant) + (1|stimulus) + (1|answer), data = glmer_correct, family=gaussian(link='log'))
+#summary(M2)
+
+# offset + lang*match
+M3 = glmer(rt_offset ~ switch*lang + (1|participant) + (1|stimulus) + (1|answer), data = glmer_correct, family=gaussian(link='log'))
+#summary(M3)
+
+########## Model Comparison ##########
+anova(Null, M1, M2, M3)
+# anova(Null, M1)
+# anova(Null, M2)
+# anova(Null, M3)
+```
+
